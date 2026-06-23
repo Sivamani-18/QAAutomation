@@ -31,9 +31,7 @@ export class AnnSacksPage {
       .locator('input[type="search"], input[type="text"]:not([type="hidden"])')
       .first();
     await expect(searchInput).toBeVisible();
-    const searchApiLoaded = this.waitForSearchApi(sku);
     await searchInput.fill(sku);
-    await searchApiLoaded;
     const searchPanelState = await this.captureSearchPanelState(sku);
     await this.dismissOverlays({ preserveSearchPanel: true });
     const resultsHeading = this.page.locator('.search-side-panel, [class*="search-side-panel"]').getByText(
@@ -108,18 +106,15 @@ export class AnnSacksPage {
     const card = await this.getFirstResultCard();
     await this.dismissOverlays({ preserveSearchPanel: true });
     await expect(card).toBeVisible();
-    const pdpApiLoaded = this.waitForPdpApis();
     await Promise.all([
       this.page.waitForURL(/\/p\//, { timeout: 30_000 }),
       card.click({ force: true })
     ]);
     await this.page.waitForLoadState('domcontentloaded');
-    await pdpApiLoaded;
   }
 
   async validatePdp(sku) {
     await this.dismissOverlays();
-    await this.waitForPdpApis();
 
     const title = this.page.locator('h1').first();
     await expect(title).toBeVisible();
@@ -198,32 +193,5 @@ export class AnnSacksPage {
     } catch {
       return null;
     }
-  }
-
-  async waitForSearchApi(sku) {
-    await this.page.waitForResponse(
-      (response) =>
-        response.url().includes('/apirequest/search/plp') &&
-        response.url().includes(encodeURIComponent(sku)) &&
-        response.status() === 200,
-      { timeout: 30_000 }
-    );
-  }
-
-  async waitForPdpApis() {
-    await Promise.allSettled([
-      this.page.waitForResponse(
-        (response) =>
-          response.url().includes('/apirequest/search/pdp/') &&
-          response.status() === 200,
-        { timeout: 30_000 }
-      ),
-      this.page.waitForResponse(
-        (response) =>
-          response.url().includes('/apirequest/catalog/inventory/') &&
-          response.status() === 200,
-        { timeout: 30_000 }
-      )
-    ]);
   }
 }
