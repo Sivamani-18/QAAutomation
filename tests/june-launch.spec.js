@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 import { AnnSacksPage } from '../src/annSacksPage.js';
 import { getConfig } from '../src/config.js';
 import { ensureArtifactsDir, writeJsonReport } from '../src/reporting.js';
-import { loadSkus } from '../src/skuWorkbook.js';
+import { loadSkus, writeResultsToWorkbook } from '../src/skuWorkbook.js';
 
 const config = getConfig();
 const skus = loadSkus(config.skuFile, config.maxSkus);
@@ -138,6 +138,7 @@ test('June launch SKUs are indexed and rendered correctly', async ({ page, reque
     results,
     failures
   });
+  writeResultsToWorkbook(config.skuFile, results);
 
   expect(fs.existsSync(reportPath)).toBeTruthy();
   expect(failures, `Validation failures written to ${reportPath}`).toEqual([]);
