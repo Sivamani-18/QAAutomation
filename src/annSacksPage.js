@@ -119,6 +119,7 @@ export class AnnSacksPage {
     const title = this.page.locator('h1').first();
     await expect(title).toBeVisible();
 
+    await this.waitForPdpPrice();
     const price = await this.extractPdpLoadedPrice();
 
     const galleryImage = this.page.locator('img[src]').first();
@@ -175,6 +176,20 @@ export class AnnSacksPage {
     }
 
     return null;
+  }
+
+  async waitForPdpPrice() {
+    const summaryPrice = this.page.locator('.product-summary__price').first();
+    await expect(summaryPrice).toBeVisible();
+    await expect
+      .poll(
+        async () => {
+          const text = ((await summaryPrice.textContent()) || '').replace(/\s+/g, ' ').trim();
+          return this.findFirstPrice(text);
+        },
+        { timeout: 20_000 }
+      )
+      .not.toBeNull();
   }
 
   async extractPrice(locator) {
