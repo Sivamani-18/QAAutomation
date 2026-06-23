@@ -8,12 +8,24 @@ export class AnnSacksPage {
 
   async loginThroughDarklaunch() {
     await this.page.goto(this.config.darklaunchUrl, { waitUntil: 'domcontentloaded' });
-    await this.page.getByPlaceholder('Password').fill(this.config.darklaunchPassword);
-    await Promise.all([
+    const passwordInput = this.page.getByPlaceholder('Password');
+    await expect(passwordInput).toBeVisible();
+    await passwordInput.fill(this.config.darklaunchPassword);
+    await this.page.getByRole('button', { name: /login/i }).click();
+
+    await Promise.race([
       this.page.waitForURL(/stage-annsacks\.kohler\.com/, { timeout: 30_000 }),
-      this.page.getByRole('button', { name: /login/i }).click()
+      this.page.waitForFunction(
+        () => {
+          const text = document?.body?.innerText || '';
+          return text !== '' && !text.includes('Kohler Login');
+        },
+        { timeout: 30_000 }
+      )
     ]);
-    await this.page.waitForLoadState('networkidle');
+
+    await this.page.goto(this.config.baseUrl, { waitUntil: 'domcontentloaded' });
+    await expect(passwordInput).not.toBeVisible({ timeout: 10_000 }).catch(() => {});
   }
 
   async searchSku(sku) {
