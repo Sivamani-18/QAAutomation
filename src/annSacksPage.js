@@ -29,26 +29,40 @@ export class AnnSacksPage {
   }
 
   async searchSku(sku) {
-    await this.page.goto(this.config.baseUrl, { waitUntil: 'domcontentloaded' });
-    await this.dismissOverlays();
+    let lastError;
 
-    const searchTrigger = this.page
-      .getByRole('button', { name: /search/i })
-      .or(this.page.getByRole('link', { name: /search/i }))
-      .first();
-    await expect(searchTrigger).toBeVisible();
-    await searchTrigger.click();
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        await this.page.goto(this.config.baseUrl, { waitUntil: 'domcontentloaded' });
+        await this.dismissOverlays();
 
-    const searchInput = this.page
-      .locator('input[type="search"], input[type="text"]:not([type="hidden"])')
-      .first();
-    await expect(searchInput).toBeVisible();
-    await searchInput.fill(sku);
-    await this.dismissOverlays({ preserveSearchPanel: true });
-    const resultCard = this.page.locator('.product-listing__tile .product-list-tile__wrapper__card[role="link"]').first();
-    await expect(resultCard).toBeVisible({ timeout: 15_000 });
-    const searchPanelState = await this.captureSearchPanelState(sku);
-    return { destination: 'results', panel: searchPanelState };
+        const searchTrigger = this.page
+          .getByRole('button', { name: /search/i })
+          .or(this.page.getByRole('link', { name: /search/i }))
+          .first();
+        await expect(searchTrigger).toBeVisible({ timeout: 20_000 });
+        await searchTrigger.click();
+
+        const searchInput = this.page
+          .locator('input[type="search"], input[type="text"]:not([type="hidden"])')
+          .first();
+        await expect(searchInput).toBeVisible({ timeout: 20_000 });
+        await searchInput.fill(sku);
+        await this.dismissOverlays({ preserveSearchPanel: true });
+
+        const resultCard = this.getResultCard(sku);
+        await expect(resultCard).toBeVisible({ timeout: 20_000 });
+
+        const searchPanelState = await this.captureSearchPanelState(sku);
+        return { destination: 'results', panel: searchPanelState };
+      } catch (error) {
+        lastError = error;
+        if (attempt === 2) {
+          throw lastError;
+        }
+        await this.page.waitForTimeout(1_000);
+      }
+    }
   }
 
   async dismissOverlays(options = {}) {
@@ -87,15 +101,25 @@ export class AnnSacksPage {
     }
   }
 
-  async getFirstResultCard() {
-    const card = this.page.locator('.product-listing__tile .product-list-tile__wrapper__card[role="link"]').first();
+  getResultCard(sku = null) {
+    if (sku) {
+      return this.page
+        .locator(`.product-listing__tile:has(a[href*="skuId=${sku}"]) .product-list-tile__wrapper__card[role="link"]`)
+        .first();
+    }
+
+    return this.page.locator('.product-listing__tile .product-list-tile__wrapper__card[role="link"]').first();
+  }
+
+  async getFirstResultCard(sku = null) {
+    const card = this.getResultCard(sku);
     await expect(card).toBeVisible();
     await card.scrollIntoViewIfNeeded();
     return card;
   }
 
   async validateSearchResults(sku) {
-    const card = await this.getFirstResultCard();
+    const card = await this.getFirstResultCard(sku);
     const swatches = card.locator('button, li, span, div').filter({ has: this.page.locator('img, svg') });
     const image = card.locator('.product-list-tile__image img').first();
     await expect(image).toBeVisible();
@@ -155,7 +179,7 @@ export class AnnSacksPage {
   }
 
   async captureSearchPanelState(sku) {
-    const card = this.page.locator('.product-listing__tile .product-list-tile__wrapper__card[role="link"]').first();
+    const card = this.getResultCard(sku);
     const cardText = ((await card.textContent().catch(() => '')) || '').replace(/\s+/g, ' ').trim();
     const suggestion = this.page.locator(`a[href*="skuId=${sku}"]`).first();
     const priceText = ((await card.locator('.product-list-tile__price').first().textContent().catch(() => '')) || '')
