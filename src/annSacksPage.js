@@ -7,6 +7,11 @@ export class AnnSacksPage {
   }
 
   async loginThroughDarklaunch() {
+    if (!this.config.requiresDarklaunch) {
+      await this.page.goto(this.config.baseUrl, { waitUntil: 'domcontentloaded' });
+      return;
+    }
+
     await this.page.goto(this.config.darklaunchUrl, { waitUntil: 'domcontentloaded' });
     const passwordInput = this.page.getByPlaceholder('Password');
     await expect(passwordInput).toBeVisible();

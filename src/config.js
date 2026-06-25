@@ -1,8 +1,10 @@
-const required = ['DARKLAUNCH_PASSWORD'];
-
 export function getConfig() {
+  const baseUrl = process.env.BASE_URL || 'https://stage-annsacks.kohler.com';
+  const requiresDarklaunch = shouldUseDarklaunch(baseUrl);
+
   const config = {
-    baseUrl: process.env.BASE_URL || 'https://stage-annsacks.kohler.com',
+    baseUrl,
+    requiresDarklaunch,
     darklaunchUrl:
       process.env.DARKLAUNCH_URL ||
       'https://darklaunch.kohler.com/confirm?dest=stage-annsacks.kohler.com/',
@@ -13,11 +15,17 @@ export function getConfig() {
     jobStatusSuccessText: process.env.JOB_STATUS_SUCCESS_TEXT || ''
   };
 
-  for (const key of required) {
-    if (!process.env[key]) {
-      throw new Error(`Missing required environment variable: ${key}`);
-    }
+  if (requiresDarklaunch && !process.env.DARKLAUNCH_PASSWORD) {
+    throw new Error('Missing required environment variable: DARKLAUNCH_PASSWORD');
   }
 
   return config;
+}
+
+function shouldUseDarklaunch(baseUrl) {
+  try {
+    return new URL(baseUrl).hostname !== 'annsacks.kohler.com';
+  } catch {
+    return true;
+  }
 }

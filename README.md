@@ -18,7 +18,7 @@ npm run install:browsers
 cp .env.example .env
 ```
 
-Required environment variable:
+Required for darklaunch-protected environments:
 
 - `DARKLAUNCH_PASSWORD`: password for `https://darklaunch.kohler.com/confirm`
 
@@ -46,5 +46,6 @@ Artifacts are written to `artifacts/` and Playwright outputs to `playwright-repo
 
 ## Notes
 
+- Production `https://annsacks.kohler.com` does not use darklaunch, so `DARKLAUNCH_PASSWORD` is not required there.
 - The lower environment is password-gated, so CI must inject `DARKLAUNCH_PASSWORD`.
 - The indexing job validation is implemented as an endpoint check because the recording only shows storefront verification. If the job is surfaced elsewhere, the suite can be extended to that source directly.
